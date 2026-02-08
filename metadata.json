@@ -1,0 +1,7 @@
+{
+  "name": "DSA Mentor",
+  "description": "An AI-powered problem-solving companion that helps students master Data Structures and Algorithms through guided struggle, progressive hints, and automatic knowledge capture.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
