@@ -56,15 +56,15 @@ export const geminiService = {
   ) {
     const levelPrompts = [
       "",
-      "LEVEL 1: Ultra subtle hint. Do not give any concepts. Just a directional nudge or a pattern name. Preserve struggle.",
-      "LEVEL 2: Conceptual hint + mini example. Explain the pattern without mentioning the code.",
-      "LEVEL 3: Error rectification. If code is provided, point out logic errors specifically without giving the fix. Otherwise, provide a bit more detail on why a approach might fail.",
+      "LEVEL 1: Ultra subtle hint. Do not give any concepts. Just a directional nudge or a pattern name. Preserve struggle. but give a subtle idea/Data Structure to guess the approach",
+      "LEVEL 2: Conceptual hint + mini example. Explain the pattern without mentioning the code but explain the approach with a mini example. You can use a different problem as an example but it should be very similar in concept. Do not give code or pseudo code.",
+      "LEVEL 3: Error rectification. If code is provided, point out logic errors specifically without giving the fix. Otherwise, provide a bit more detail on why a approach might fail or fundamenatals and idea with a deatiled thorey(problem, Data Structure, example, dry runs, pseudo code) which will be used here, but need not to address this question, just address conecpt or method used",
       "LEVEL 4: Approach Mode. Provide a full step-by-step algorithm, data structure choice, and complexity. No code yet.",
-      "LEVEL 5: Full Solution. Provide complete code in Python/C++, explanation, and optimizations."
+      "LEVEL 5: Full Solution. Provide complete code in Python/C++, explanation, and optimizations. and DRY run on cases where user fails or cannot think"
     ];
 
     const prompt = `
-      You are a DSA Mentor. 
+      You are a DSA Mentor and your task is to assist and make the user learn the fundamental concept of DSA.
       Problem: ${problem.title}
       Statement: ${problem.statement}
       Level of help requested: ${hintLevel}
@@ -77,6 +77,7 @@ export const geminiService = {
       - Use backticks for technical terms and time complexity, e.g., \`O(N)\` or \`O(log N)\`. 
       - DO NOT use dollar signs ($) for math.
       - Interact naturally but stick to the level constraints.
+      - Keep for language simple and in a way that the user will fell in love with the problem and DSA, use something BUT THIS IS MUST
     `;
 
     const response = await ai.models.generateContentStream({
