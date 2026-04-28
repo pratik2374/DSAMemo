@@ -1,103 +1,139 @@
-# DSA Mentor - AI-Powered Coding Assistant
+# DSA Memo — AI-Powered DSA Mentor
 
-DSA Mentor is a React-based application designed to help users practice and master Data Structures and Algorithms (DSA) problems. It leverages Google's Gemini AI to provide a personalized, interactive tutoring experience, complete with a progressive hint system, code workspace, and progress tracking via Google Sheets.
+DSA Memo is a personal, browser-based study tool that makes Data Structures & Algorithms learning interactive. Paste any problem link or title and get a real AI mentor that adjusts how much it reveals based on how stuck you are — from a tiny nudge all the way to a full walkthrough.
 
-## 🚀 Features
+Powered by **Groq** (`llama-3.3-70b-versatile`) for inference and **PlayAI TTS** for voice readback. Takeaways sync to your personal **Google Sheet** for long-term review.
 
-- **AI-Powered Assistance**: Integrated with Google Gemini to act as a virtual mentor.
-- **Progressive Hint System**: 
-  - Offers 5 levels of assistance, ranging from "Ultra Subtle" hints to a "Full Solution".
-  - Prevents spoilers and encourages independent problem-solving.
-- **Interactive Chat & Code**: 
-  - Split-screen interface with a dedicated chat area and a code editor.
-  - Syntax highlighting and code formatting.
-- **Problem Management**:
-  - Submit any DSA problem statement to start a session.
-  - AI parses and contextualizes the problem automatically.
-- **Smart Takeaways**:
-  - Generate concise takeaways from your practice sessions.
-  - **Google Sheets Sync**: Automatically save your takeaways to a Google Sheet with visual formatting (alternating colors) for easy review.
-- **Customizable UI**:
-  - Resizable workspace.
-  - Dark/Light mode support.
-  - Collapsible sidebars and descriptions.
+---
 
-## 🛠️ Tech Stack
+## Features
 
-- **Frontend**: React (v19), TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **AI Integration**: Google Gemini (`@google/genai`)
-- **Persistence**: Google Sheets API (via customized client-side Service Account auth)
-- **Utilities**: `marked` for Markdown rendering, `dompurify` for security.
+**Progressive Hint System (5 levels)**
+| Level | What you get |
+|-------|-------------|
+| 1 | A directional nudge — preserve the struggle |
+| 2 | The core concept + a mini example from a similar problem |
+| 3 | Logic error spotting on your code, or a deep theory breakdown |
+| 4 | Full step-by-step algorithm, data structure choice, complexity |
+| 5 | Complete solution (Python / C++), dry run, optimizations |
 
-## 📋 Prerequisites
+**AI Problem Normalizer** — paste a LeetCode URL, a problem title, or raw text. The model returns a structured card with statement, constraints, examples, difficulty, and tags.
 
-- Node.js (v18 or higher recommended)
-- A Google Cloud Project with:
-  - Gemini API enabled.
-  - Google Sheets API enabled.
-  - A Service Account with permission to edit your target Google Sheet.
+**Streaming Chat** — hints stream token-by-token via Groq's streaming API so you're never waiting on a wall of text.
 
-## 🔧 Installation & Setup
+**Voice Readback** — click the speaker icon on any assistant message to hear it read aloud via Groq's PlayAI TTS.
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd dsa-mentor
-   ```
+**Knowledge Base** — after solving, hit "Capture Insight" to generate a structured takeaway (notes, concept, DSA category, importance rating). Edit inline, export as CSV, or sync directly to a Google Sheet.
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+**Session Analytics** — tracks time spent, hint levels used per session, and interview readiness score.
 
-3. **Configure Environment Variables**
-   Create a `.env` file in the root directory with the following keys:
+**Dark / Light mode** — full theme toggle, resizable split-screen workspace.
 
-   ```env
-   # Gemini AI Configuration
-   GEMINI_API_KEY=your_gemini_api_key
+---
 
-   # Google Sheets Integration (Service Account)
-   # Note: Sensitive keys are used client-side for this personal tool.
-   GOOGLE_SERVICE_ACCOUNT_TYPE=service_account
-   GOOGLE_PROJECT_ID=your_project_id
-   GOOGLE_PRIVATE_KEY_ID=your_key_id
-   GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-   GOOGLE_CLIENT_EMAIL=your_service_account_email
-   GOOGLE_CLIENT_ID=your_client_id
-   GOOGLE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
-   GOOGLE_TOKEN_URI=https://oauth2.googleapis.com/token
-   GOOGLE_AUTH_PROVIDER_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
-   GOOGLE_CLIENT_CERT_URL=your_client_cert_url
-   GOOGLE_SHEET_ID=your_target_google_sheet_id
-   ```
+## Tech Stack
 
-   > **Security Note**: This application uses a Service Account key directly in the frontend (`googleSheetsService.ts`). This is intended for **local/personal use only**. Do not deploy this to a public URL without migrating the authentication logic to a secure backend.
+| Layer | Technology |
+|-------|-----------|
+| UI | React 19, TypeScript, Tailwind CSS |
+| Build | Vite |
+| AI Inference | Groq — `llama-3.3-70b-versatile` |
+| TTS | Groq — `playai-tts` (Fritz-PlayAI voice) |
+| Persistence | Google Sheets API v4 (Service Account JWT auth via Web Crypto) |
+| Markdown | `marked` + `dompurify` |
 
-4. **Run the Development Server**
-   ```bash
-   npm run dev
-   ```
-   The app will be available at `http://localhost:3000`.
+---
 
-## 📂 Project Structure
+## Prerequisites
 
-```
-src/
-├── components/         # UI Components (Sidebar, ChatArea, CodeWorkspace, etc.)
-├── geminiService.ts    # Logic for interacting with Google Gemini AI
-├── googleSheetsService.ts # Logic for syncing data to Google Sheets
-├── App.tsx            # Main application component
-├── types.ts           # TypeScript definitions
-└── ...
+- Node.js 18+
+- A [Groq API key](https://console.groq.com/) (free tier works)
+- A Google Cloud project with **Google Sheets API** enabled and a Service Account that has editor access to your sheet (only needed for the sync feature)
+
+---
+
+## Setup
+
+### 1. Install dependencies
+
+```bash
+npm install
 ```
 
-## 🤝 Contributing
+### 2. Create `.env`
 
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+```env
+# Groq
+GROQ_API_KEY=your_groq_api_key_here
+
+# Google Sheets (optional — only needed for "Sync to Live Sheet")
+GOOGLE_SERVICE_ACCOUNT_TYPE=service_account
+GOOGLE_PROJECT_ID=your_project_id
+GOOGLE_PRIVATE_KEY_ID=your_key_id
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+GOOGLE_CLIENT_EMAIL=your_service_account@project.iam.gserviceaccount.com
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
+GOOGLE_TOKEN_URI=https://oauth2.googleapis.com/token
+GOOGLE_AUTH_PROVIDER_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
+GOOGLE_CLIENT_CERT_URL=your_client_cert_url
+GOOGLE_SHEET_ID=your_google_sheet_id
+```
+
+> The Google Sheets integration runs entirely client-side using Web Crypto API for JWT signing. This is intentional for a **personal / local tool** — do not deploy publicly with a service account key exposed.
+
+### 3. Run
+
+```bash
+npm run dev
+```
+
+App starts at `http://localhost:3000`.
+
+---
+
+## Project Structure
+
+```
+DSAMemo/
+├── components/
+│   ├── ChatArea.tsx          # Streaming chat UI, voice readback
+│   ├── Sidebar.tsx           # Problem input, session controls
+│   ├── CodeWorkspace.tsx     # Code editor + problem description tabs
+│   ├── TakeawaysModal.tsx    # Knowledge base — edit, export, sync
+│   └── Analytics.tsx         # Session stats dashboard
+├── geminiService.ts          # All Groq API calls
+├── googleSheetsService.ts    # Google Sheets JWT auth + append logic
+├── App.tsx                   # Root state, layout, orchestration
+└── types.ts                  # Problem, ChatMessage, Takeaway, UserStats
+```
+
+---
+
+## How It Works
+
+```
+User pastes problem
+       |
+normalizeProblem()  ->  Groq JSON mode  ->  structured Problem card
+       |
+User chats / requests hint
+       |
+getGuidedHintStream()  ->  Groq streaming  ->  token-by-token response
+       |
+User clicks "Capture Insight"
+       |
+generateTakeaway()  ->  Groq JSON mode  ->  notes, concept, category, stars
+       |
+"Sync to Live Sheet"  ->  JWT (Web Crypto)  ->  Google Sheets API batchUpdate
+```
+
+---
+
+## Scripts
+
+```bash
+npm run dev      # dev server on :3000
+npm run build    # production build
+npm run preview  # preview production build
+```
