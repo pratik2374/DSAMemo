@@ -11,8 +11,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      'process.env.GROQ_API_KEY': JSON.stringify(env.GROQ_API_KEY),
       'process.env.GOOGLE_SERVICE_ACCOUNT_TYPE': JSON.stringify(env.GOOGLE_SERVICE_ACCOUNT_TYPE),
       'process.env.GOOGLE_PROJECT_ID': JSON.stringify(env.GOOGLE_PROJECT_ID),
       'process.env.GOOGLE_PRIVATE_KEY_ID': JSON.stringify(env.GOOGLE_PRIVATE_KEY_ID),

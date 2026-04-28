@@ -76,6 +76,7 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
       const problem = await geminiService.normalizeProblem(input);
+      console.log("Normalized Problem:", problem);
       setActiveProblem(problem);
       
       const problemContext = `
@@ -163,12 +164,21 @@ ${problem.constraints.map(c => `- ${c}`).join('\n')}
   };
 
   const generateTakeaway = async () => {
-    if (!activeProblem || chatMessages.length < 2) return;
+    if (!activeProblem || chatMessages.length < 2 || isLoading) return;
     setIsLoading(true);
     try {
       const chatHistory = chatMessages.map(m => `${m.role}: ${m.content}`).join('\n');
       const takeaway = await geminiService.generateTakeaway(activeProblem, chatHistory);
-      setTakeaways(prev => [takeaway, ...prev]);
+      setTakeaways(prev => {
+        const existingIdx = prev.findIndex(t => t.problemTitle === takeaway.problemTitle);
+        if (existingIdx >= 0) {
+          // Refresh the existing entry for this problem instead of adding a duplicate
+          const updated = [...prev];
+          updated[existingIdx] = { ...takeaway, id: prev[existingIdx].id };
+          return updated;
+        }
+        return [takeaway, ...prev];
+      });
       setShowTakeaways(true);
     } catch (error) {
       console.error(error);

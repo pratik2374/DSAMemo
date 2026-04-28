@@ -19,20 +19,18 @@ export const googleSheetsService = {
    * Helper to convert PEM to binary
    */
   async importPrivateKey(pem: string): Promise<CryptoKey> {
-    // clean up the PEM string
-    const pemHeader = "-----BEGIN PRIVATE KEY-----";
-    const pemFooter = "-----END PRIVATE KEY-----";
-    // Handle both "\n" literals and actual newlines
-    let pemContents = pem;
-    if (pemContents.startsWith('"') && pemContents.endsWith('"')) {
-      pemContents = pemContents.slice(1, -1);
-    }
-    pemContents = pemContents.replace(/\\n/g, ''); // Remove literal \n
-    pemContents = pemContents.replace(/\n/g, '');   // Remove actual newlines
-    pemContents = pemContents.replace(pemHeader, '').replace(pemFooter, '');
+    // Normalize any literal \n sequences to real newlines (handles both
+    // Vite-serialized and raw env values), then extract the base64 body
+    // between the PEM header/footer with a regex so whitespace can't sneak in.
+    const normalized = pem.replace(/\\n/g, '\n');
+    const match = normalized.match(
+      /-----BEGIN PRIVATE KEY-----\s*([\s\S]+?)\s*-----END PRIVATE KEY-----/
+    );
+    if (!match) throw new Error('Invalid PEM: could not find PRIVATE KEY block');
+    const b64 = match[1].replace(/\s/g, '');
 
     // Base64 decode
-    const binaryDerString = window.atob(pemContents);
+    const binaryDerString = window.atob(b64);
     const binaryDer = new Uint8Array(binaryDerString.length);
     for (let i = 0; i < binaryDerString.length; i++) {
       binaryDer[i] = binaryDerString.charCodeAt(i);

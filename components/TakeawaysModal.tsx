@@ -12,6 +12,7 @@ interface TakeawaysModalProps {
 const TakeawaysModal: React.FC<TakeawaysModalProps> = ({ takeaways, onUpdateTakeaway, onClose }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [localTakeaways, setLocalTakeaways] = useState<Takeaway[]>([]);
+  const [syncedIds, setSyncedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setLocalTakeaways(takeaways);
@@ -34,11 +35,20 @@ const TakeawaysModal: React.FC<TakeawaysModalProps> = ({ takeaways, onUpdateTake
   };
 
   const handleSyncToLiveSheet = async () => {
-    if (localTakeaways.length === 0) return;
+    const unsynced = localTakeaways.filter((t: Takeaway) => !syncedIds.has(t.id));
+    if (unsynced.length === 0) {
+      showToast("All entries already synced to sheet!");
+      return;
+    }
     setIsSyncing(true);
     try {
-      await googleSheetsService.syncToSheet(localTakeaways);
-      showToast("Successfully synced to Google Sheets!");
+      await googleSheetsService.syncToSheet(unsynced);
+      setSyncedIds((prev: Set<string>) => {
+        const next = new Set(prev);
+        unsynced.forEach((t: Takeaway) => next.add(t.id));
+        return next;
+      });
+      showToast(`Synced ${unsynced.length} new entr${unsynced.length === 1 ? 'y' : 'ies'} to Google Sheets!`);
     } catch (err: any) {
       showToast(err.message || "Failed to sync. Check console for details.", true);
     } finally {
