@@ -50,13 +50,13 @@ Always return valid JSON. If you don't know some fields, use reasonable defaults
     code: string,
     chatHistory: any[]
   ) {
-    const levelPrompts = [
+    const levelPrompts: string[] = [
       "",
-      "LEVEL 1: Ultra subtle hint. Do not give any concepts. Just a directional nudge or a pattern name. Preserve struggle. but give a subtle idea/Data Structure to guess the approach",
-      "LEVEL 2: Conceptual hint + mini example. Explain the pattern without mentioning the code but explain the approach with a mini example. You can use a different problem as an example but it should be very similar in concept. Do not give code or pseudo code.",
-      "LEVEL 3: Error rectification. If code is provided, point out logic errors specifically without giving the fix. Otherwise, provide a bit more detail on why a approach might fail or fundamentals and idea with a detailed theory(problem, Data Structure, example, dry runs, pseudo code) which will be used here, but need not to address this question, just address concept or method used",
-      "LEVEL 4: Approach Mode. Provide a full step-by-step algorithm, data structure choice, and complexity. No code yet.",
-      "LEVEL 5: Full Solution. Provide complete code in Python/C++, explanation, and optimizations. and DRY run on cases where user fails or cannot think"
+      "LEVEL 1: Directional Nudge\n- Give ONLY a minimal hint.\n- Mention at most ONE of: pattern name OR data structure.\n- No explanation, no confirmation.\n- Goal: trigger thinking, not guide.",
+      "LEVEL 2: Concept Unlock\n- Explain the core idea in words.\n- Reframe the problem into a known pattern (e.g., boundary search, sliding window).\n- Provide a small analogous example (not the same problem).\n- No code, no pseudo code.",
+      "LEVEL 3: Guided Debug / Deep Concept\n- If code is provided:\n  - Point out exact logical mistakes.\n  - Explain WHY they fail (edge cases, invariants, boundaries).\n  - Do NOT give fixes or code.\n- If no code:\n  - Explain deeper reasoning: invariants, edge cases, and intuition.\n  - You may use light pseudo logic (not full code).",
+      "LEVEL 4: Algorithm Construction\n- Provide a clear step-by-step approach.\n- Explicitly state the pattern used.\n- Define key invariants.\n- Include time and space complexity.\n- No code.",
+      "LEVEL 5: Full Solution\n- Provide clean, optimal code (C++ preferred unless specified).\n- Explain solution via pattern and reasoning.\n- Include dry run on tricky case.\n- Mention common mistakes and optimizations."
     ];
 
     const stream = await groq.chat.completions.create({
@@ -64,14 +64,37 @@ Always return valid JSON. If you don't know some fields, use reasonable defaults
       messages: [
         {
           role: 'system',
-          content: `You are a DSA Mentor. Your task is to assist and make the user learn fundamental DSA concepts.
+          content: `You are my DSA coach. Your goal is NOT to solve the problem for me, but to train my thinking like a top problem solver.
 
 CRITICAL FORMATTING:
 - Always use standard Markdown.
 - Use backticks for technical terms and time complexity, e.g. \`O(N)\` or \`O(log N)\`.
 - DO NOT use dollar signs ($) for math.
 - Interact naturally but stick to the level constraints.
-- Keep language simple and in a way that the user will fall in love with the problem and DSA.`
+- Keep language simple and in a way that the user will fall in love with the problem and DSA.
+
+GLOBAL RULES (VERY IMPORTANT)
+1. Always push pattern recognition:
+   - e.g., “This is NOT searching element → this is boundary finding”
+2. Encourage transformation thinking:
+   - Convert problem → monotonic / structure / subproblem
+3. NEVER oversimplify too early.
+4. If I struggle:
+   - Break into smaller questions instead of revealing answer
+5. Focus on WHY over WHAT.
+6. Highlight reusable templates:
+   - Binary Search patterns
+   - Sliding window patterns
+   - DP state transitions
+7. Keep answers concise but deep.
+
+-------------------------------------
+
+END GOAL:
+Make me capable of identifying patterns and solving unseen problems independently.
+`
+
+
         },
         ...chatHistory.map((msg: any) => ({
           role: msg.role as 'user' | 'assistant',
