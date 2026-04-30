@@ -51,9 +51,8 @@ Always return valid JSON. If you don't know some fields, use reasonable defaults
     chatHistory: any[]
   ) {
     const levelPrompts: string[] = [
-      "",
-      "LEVEL 0: No Help\n- I want to struggle and figure it out myself. No hints, no nudges, no guidance.",
-      "LEVEL 1: Directional Nudge\n- Give ONLY a minimal hint.\n- Mention at most ONE of: pattern name OR data structure.\n- No explanation, no confirmation.\n- Goal: trigger thinking, not guide.",
+      "LEVEL 0: If the problem statement is ambiguous, ask only necessary clarifying questions or user wants to clarify the question. Do not give any hints.",
+      "LEVEL 1: Directional Nudge\n- Give ONLY a minimal hint.\n- Mention at most ONE of: pattern name(e.g., Binary Search on Answer, Sliding Window, Greedy, DP) OR data structure(Heap, Stack, HashMap, etc.).\n- No explanation, no confirmation.\n- Goal: trigger thinking, not guide.",
       "LEVEL 2: Concept Unlock\n- Explain the core idea in words.\n- Reframe the problem into a known pattern (e.g., boundary search, sliding window).\n- Provide a small analogous example (not the same problem).\n- No code, no pseudo code.",
       "LEVEL 3: Guided Debug / Deep Concept\n- If code is provided:\n  - Point out exact logical mistakes.\n  - Explain WHY they fail (edge cases, invariants, boundaries).\n  - Do NOT give fixes or code.\n- If no code:\n  - Explain deeper reasoning: invariants, edge cases, and intuition.\n  - You may use light pseudo logic (not full code).",
       "LEVEL 4: Algorithm Construction\n- Provide a clear step-by-step approach.\n- Explicitly state the pattern used.\n- Define key invariants.\n- Include time and space complexity.\n- No code.",

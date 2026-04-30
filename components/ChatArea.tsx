@@ -16,10 +16,23 @@ interface ChatAreaProps {
 const ChatArea: React.FC<ChatAreaProps> = ({ messages, onSendMessage, isTyping, onSpeak, onOpenCode, darkMode }) => {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+  const prevMessageCountRef = useRef(0);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  };
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const el = scrollRef.current;
+    if (!el) return;
+    const isNewMessage = messages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+    // Scroll when a new message is added (always), or when streaming and user is already at the bottom
+    if (isNewMessage || isAtBottomRef.current) {
+      el.scrollTop = el.scrollHeight;
     }
   }, [messages, isTyping]);
 
@@ -47,8 +60,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({ messages, onSendMessage, isTyping, 
 
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-900 relative overflow-hidden transition-colors">
-      <div 
+      <div
         ref={scrollRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"
       >
         {messages.length === 0 && (

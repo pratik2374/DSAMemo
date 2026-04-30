@@ -26,7 +26,7 @@ const App: React.FC = () => {
 
   const [stats, setStats] = useState<UserStats>({
     problemsStarted: 0,
-    hintsUsedCount: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    hintsUsedCount: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
     totalTimeSeconds: 0,
     solvedCount: 0
   });
@@ -263,30 +263,61 @@ ${problem.constraints.map(c => `- ${c}`).join('\n')}
             className="flex flex-col border-r dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300"
           >
             <div className="p-4 border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 shrink-0 transition-colors">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
                   <i className="fa-solid fa-wand-sparkles text-indigo-500"></i>
-                  Level: {hintLevel}
+                  Assistance — Level {hintLevel}
                 </label>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-gray-400 italic">
-                    {hintLevel === 1 ? "Ultra Subtle" : hintLevel === 5 ? "Full Solution" : "Guided"}
-                  </span>
-                  {activeProblem && isWorkspaceCollapsed && (
-                     <button 
-                      onClick={() => setIsWorkspaceCollapsed(false)}
-                      className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-[10px] font-bold flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded transition-colors"
-                    >
-                      <i className="fa-solid fa-expand"></i> Show Description
-                    </button>
-                  )}
-                </div>
+                {activeProblem && isWorkspaceCollapsed && (
+                  <button
+                    onClick={() => setIsWorkspaceCollapsed(false)}
+                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-[10px] font-bold flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded transition-colors"
+                  >
+                    <i className="fa-solid fa-expand"></i> Show Description
+                  </button>
+                )}
               </div>
-              <input 
-                type="range" 
-                min="1" 
-                max="5" 
-                value={hintLevel} 
+
+              {/* Numbers above the slider — px-[7px] offsets half the thumb width so 0 and 5 sit over their thumb stops */}
+              <div className="flex justify-between px-[7px] mb-1">
+                {([
+                  { n: 0, tip: 'Question clarification' },
+                  { n: 1, tip: 'One pattern name or DS, nothing more' },
+                  { n: 2, tip: 'Core idea + a mini analogous example' },
+                  { n: 3, tip: 'Logic errors spotted or deep theory' },
+                  { n: 4, tip: 'Full algorithm + complexity, no code' },
+                  { n: 5, tip: 'Complete code, dry run & optimizations' },
+                ] as const).map(({ n, tip }) => (
+                  <div key={n} className="relative group">
+                    <button
+                      onClick={() => handleHintLevelChange(n)}
+                      className={`text-[11px] font-black w-4 text-center block transition-colors ${
+                        hintLevel === n
+                          ? 'text-indigo-600 dark:text-indigo-400'
+                          : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                    {/* Tooltip: anchored left for 0, right for 5, centered otherwise */}
+                    <div className={`absolute bottom-full mb-2 px-2.5 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-[10px] rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl ${
+                      n === 0 ? 'left-0' : n === 5 ? 'right-0' : 'left-1/2 -translate-x-1/2'
+                    }`}>
+                      {tip}
+                      <div className={`absolute top-full border-4 border-transparent border-t-gray-900 dark:border-t-gray-700 ${
+                        n === 0 ? 'left-2' : n === 5 ? 'right-2' : 'left-1/2 -translate-x-1/2'
+                      }`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Slider */}
+              <input
+                type="range"
+                min="0"
+                max="5"
+                value={hintLevel}
                 onChange={(e) => handleHintLevelChange(parseInt(e.target.value))}
                 className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
               />
