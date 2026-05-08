@@ -134,6 +134,7 @@ ${problem.constraints.map(c => `- ${c}`).join('\n')}
         activeProblem,
         hintLevel,
         code,
+        text,
         chatMessages
       );
 
