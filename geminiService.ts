@@ -48,74 +48,212 @@ Always return valid JSON. If you don't know some fields, use reasonable defaults
     problem: Problem,
     hintLevel: number,
     code: string,
+    latestUserQuery: string,
     chatHistory: any[]
   ) {
     const levelPrompts: string[] = [
-      "LEVEL 0: If the problem statement is ambiguous, ask only necessary clarifying questions or user wants to clarify the question. Do not give any hints.",
-      "LEVEL 1: Directional Nudge\n- Give ONLY a minimal hint.\n- Mention at most ONE of: pattern name(e.g., Binary Search on Answer, Sliding Window, Greedy, DP) OR data structure(Heap, Stack, HashMap, etc.).\n- No explanation, no confirmation.\n- Goal: trigger thinking, not guide.",
-      "LEVEL 2: Concept Unlock\n- Explain the core idea in words.\n- Reframe the problem into a known pattern (e.g., boundary search, sliding window).\n- Provide a small analogous example (not the same problem).\n- No code, no pseudo code.",
-      "LEVEL 3: Guided Debug / Deep Concept\n- If code is provided:\n  - Point out exact logical mistakes.\n  - Explain WHY they fail (edge cases, invariants, boundaries).\n  - Do NOT give fixes or code.\n- If no code:\n  - Explain deeper reasoning: invariants, edge cases, and intuition.\n  - You may use light pseudo logic (not full code).",
-      "LEVEL 4: Algorithm Construction\n- Provide a clear step-by-step approach.\n- Explicitly state the pattern used.\n- Define key invariants.\n- Include time and space complexity.\n- No code.",
-      "LEVEL 5: Full Solution\n- Provide clean, optimal code (C++ and Python both preferred unless specified).\n- Explain solution via pattern and reasoning.\n- Include dry run on tricky case.\n- Mention common mistakes and optimizations."
+      `
+LEVEL 0 — Clarification Only
+
+Use this ONLY when:
+- the user asks for clarification
+- the problem statement is ambiguous
+- important information is missing
+
+Rules:
+- Ask only necessary clarification questions.
+- Do NOT give hints.
+- Do NOT discuss patterns or solutions.
+`,
+
+      `
+LEVEL 1 — Tiny Directional Hint
+
+Rules:
+- Focus ONLY on the user's current blockage.
+- Give a very small nudge.
+- Mention at most ONE:
+  - pattern
+  - invariant
+  - observation
+  - data structure
+- No explanation.
+- No algorithm steps.
+- No pseudo code.
+- Keep it under 3 sentences.
+`,
+
+      `
+LEVEL 2 — Concept Unlock
+
+Rules:
+- Explain ONLY the key insight needed.
+- Directly address the user's confusion.
+- Use small examples ONLY if necessary.
+- Connect to known patterns naturally.
+- No code.
+- No full algorithm.
+- No implementation details.
+`,
+
+      `
+LEVEL 3 — Guided Debugging / Deep Reasoning
+
+If code exists:
+- Analyze the user's code FIRST.
+- Identify the EXACT logical issue.
+- Explain:
+  - where reasoning breaks
+  - incorrect assumptions
+  - failing edge cases
+  - invariant violations
+- Do NOT provide corrected code.
+
+If no code:
+- Explain the deeper reasoning needed.
+- Focus on invariants and transitions.
+- You may use light pseudo logic.
+- No full solution.
+`,
+
+      `
+LEVEL 4 — Algorithm Construction
+
+Rules:
+- Give step-by-step approach.
+- Explicitly name the pattern.
+- Explain WHY the approach works.
+- Define key invariants.
+- Mention edge cases.
+- Include time + space complexity.
+- No code.
+`,
+
+      `
+LEVEL 5 — Full Solution
+
+Rules:
+- Provide optimal clean solution.
+- Prefer both C++ and Python.
+- Explain:
+  - intuition
+  - reasoning
+  - pattern
+  - edge cases
+- Include dry run.
+- Mention common mistakes.
+`
     ];
+
+    const systemPrompt = `
+You are an elite DSA mentor helping the user become an independent problem solver.
+
+PRIMARY OBJECTIVE:
+Answer the USER'S MOST RECENT QUESTION directly and specifically.
+
+Your response must ALWAYS adapt to:
+- the user's latest doubt
+- the user's current code
+- the user's solving stage
+- the requested hint depth
+
+IMPORTANT BEHAVIOR:
+
+1. PRIORITIZE USER CONFUSION
+- Solve the user's CURRENT confusion.
+- Do NOT give generic tutorials.
+- Do NOT explain unrelated concepts.
+
+2. CODE-FIRST REASONING
+If code is provided:
+- Analyze the user's code BEFORE theory.
+- Refer to THEIR logic.
+- Explain what THEIR code is doing.
+
+3. DO NOT RESET CONTEXT
+- Continue naturally from previous conversation.
+- Assume the user remembers earlier discussion.
+- Do not restart explanations from scratch.
+
+4. AVOID GENERIC RESPONSES
+BAD RESPONSES:
+- Generic DSA lectures
+- Full pattern explanations when unnecessary
+- Ignoring user's actual question
+- Repeating previous hints
+- Giving unrelated optimizations
+
+5. TEACH LIKE A TOP MENTOR
+- Encourage thinking.
+- Focus on WHY something works/fails.
+- Reveal only the requested depth.
+- Prefer targeted guidance over long explanations.
+
+FORMAT RULES:
+- Use Markdown.
+- Use backticks for technical terms and complexity.
+- Never use LaTeX.
+- Keep responses concise but insightful.
+`;
 
     const stream = await groq.chat.completions.create({
       model: MODEL,
       messages: [
         {
           role: 'system',
-          content: `You are my DSA coach. Your goal is NOT to solve the problem for me, but to train my thinking like a top problem solver.
-
-CRITICAL FORMATTING:
-- Always use standard Markdown.
-- Use backticks for technical terms and time complexity, e.g. \`O(N)\` or \`O(log N)\`.
-- DO NOT use dollar signs ($) for math.
-- Interact naturally but stick to the level constraints.
-- Keep language simple and in a way that the user will fall in love with the problem and DSA.
-
-GLOBAL RULES (VERY IMPORTANT)
-1. Always push pattern recognition:
-   - e.g., “This is NOT searching element → this is boundary finding”
-2. Encourage transformation thinking:
-   - Convert problem → monotonic / structure / subproblem
-3. NEVER oversimplify too early.
-4. If I struggle:
-   - Break into smaller questions instead of revealing answer
-5. Focus on WHY over WHAT.
-6. Highlight reusable templates:
-   - Binary Search patterns
-   - Sliding window patterns
-   - DP state transitions
-7. Keep answers concise but deep.
-
--------------------------------------
-
-END GOAL:
-Make me capable of identifying patterns and solving unseen problems independently.
-`
-
-
+          content: systemPrompt
         },
+
         ...chatHistory.map((msg: any) => ({
           role: msg.role as 'user' | 'assistant',
           content: msg.content
         })),
+
         {
           role: 'user',
-          content: `Problem: ${problem.title}
-Statement: ${problem.statement}
-Level of help requested: ${hintLevel}
-Current User Code: \`\`\`${code}\`\`\`
+          content: `
+Problem Title:
+${problem.title}
 
-Instruction: ${levelPrompts[hintLevel]}`
+Problem Statement:
+${problem.statement}
+
+Latest User Question:
+${latestUserQuery}
+
+Current User Code:
+\`\`\`
+${code || 'No code provided'}
+\`\`\`
+
+Requested Hint Level:
+${hintLevel}
+
+Hint-Level Instructions:
+${levelPrompts[hintLevel]}
+
+IMPORTANT:
+- Directly answer the latest user question.
+- Use the user's code and reasoning.
+- Avoid generic explanations.
+`
         }
       ],
+
+      temperature: hintLevel <= 2 ? 0.3 : 0.5,
+
       stream: true
     });
 
     for await (const chunk of stream) {
       const text = chunk.choices[0]?.delta?.content || '';
-      if (text) yield { text, sources: undefined };
+
+      if (text) {
+        yield {
+          text,
+          sources: undefined
+        };
+      }
     }
   },
 
