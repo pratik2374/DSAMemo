@@ -7,7 +7,7 @@ const groq = new Groq({
   dangerouslyAllowBrowser: true
 });
 
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL = 'openai/gpt-oss-120b';
 
 export const geminiService = {
   async normalizeProblem(input: string): Promise<Problem> {
