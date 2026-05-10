@@ -266,7 +266,7 @@ IMPORTANT:
           content: `You are a DSA learning assistant. Analyze problem-solving sessions and generate structured takeaways.
 Return a JSON object with exactly these fields:
 {
-  "notes": string (detailed approaches used during the session),
+  "notes": string (detailed approaches used during the session, like explaing in the interview, like when we read the approach instantly we make the solution),
   "concept": string (key generalizable takeaways the user can carry to similar problems),
   "category": string (DSA topic e.g. "Linked List", "Sliding Window", "Dynamic Programming"),
   "importance": number (1-5 rating of problem importance)
