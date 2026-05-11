@@ -1,6 +1,6 @@
 <div align="center">
 
-![DSA Memo Banner](file:///C:/Users/prati/.gemini/antigravity/brain/7c8c1192-85b6-43ac-8958-0c7e7a98346c/dsa_memo_banner_1778513590584.png)
+![DSA Memo Banner](dsa_memo_banner_1778513590584.png)
 
 # 🧠 DSA Memo — Your AI-Powered DSA Mentor
 
@@ -22,7 +22,7 @@ DSA Memo is a personal, browser-based study environment designed to facilitate d
 
 ## 📸 Sneak Peek
 
-![DSA Memo Interface Mockup](file:///C:/Users/prati/.gemini/antigravity/brain/7c8c1192-85b6-43ac-8958-0c7e7a98346c/dsa_memo_mockup_1778513612059.png)
+![DSA Memo Interface Mockup](dsa_memo_mockup_1778513612059.png)
 
 ---
 
