@@ -1,139 +1,131 @@
-# DSA Memo — AI-Powered DSA Mentor
+<div align="center">
 
-DSA Memo is a personal, browser-based study tool that makes Data Structures & Algorithms learning interactive. Paste any problem link or title and get a real AI mentor that adjusts how much it reveals based on how stuck you are — from a tiny nudge all the way to a full walkthrough.
+![DSA Memo Banner](file:///C:/Users/prati/.gemini/antigravity/brain/7c8c1192-85b6-43ac-8958-0c7e7a98346c/dsa_memo_banner_1778513590584.png)
 
-Powered by **Groq** (`llama-3.3-70b-versatile`) for inference and **PlayAI TTS** for voice readback. Takeaways sync to your personal **Google Sheet** for long-term review.
+# 🧠 DSA Memo — Your AI-Powered DSA Mentor
 
----
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
+[![Groq](https://img.shields.io/badge/AI_Inference-Groq-orange)](https://groq.com/)
 
-## Features
+**Stop copying solutions. Start mastering concepts.**  
+DSA Memo is a personal, browser-based study environment designed to facilitate deep learning of Data Structures & Algorithms. It doesn't just give you the answer; it acts as a mentor that adjusts its guidance based on your struggle.
 
-**Progressive Hint System (5 levels)**
-| Level | What you get |
-|-------|-------------|
-| 1 | A directional nudge — preserve the struggle |
-| 2 | The core concept + a mini example from a similar problem |
-| 3 | Logic error spotting on your code, or a deep theory breakdown |
-| 4 | Full step-by-step algorithm, data structure choice, complexity |
-| 5 | Complete solution (Python / C++), dry run, optimizations |
+[Explore Features](#-features) • [Quick Start](#-quick-start) • [Tech Stack](#-tech-stack) • [How It Works](#-how-it-works)
 
-**AI Problem Normalizer** — paste a LeetCode URL, a problem title, or raw text. The model returns a structured card with statement, constraints, examples, difficulty, and tags.
-
-**Streaming Chat** — hints stream token-by-token via Groq's streaming API so you're never waiting on a wall of text.
-
-**Voice Readback** — click the speaker icon on any assistant message to hear it read aloud via Groq's PlayAI TTS.
-
-**Knowledge Base** — after solving, hit "Capture Insight" to generate a structured takeaway (notes, concept, DSA category, importance rating). Edit inline, export as CSV, or sync directly to a Google Sheet.
-
-**Session Analytics** — tracks time spent, hint levels used per session, and interview readiness score.
-
-**Dark / Light mode** — full theme toggle, resizable split-screen workspace.
+</div>
 
 ---
 
-## Tech Stack
+## 📸 Sneak Peek
 
-| Layer | Technology |
-|-------|-----------|
-| UI | React 19, TypeScript, Tailwind CSS |
-| Build | Vite |
-| AI Inference | Groq — `llama-3.3-70b-versatile` |
-| TTS | Groq — `playai-tts` (Fritz-PlayAI voice) |
-| Persistence | Google Sheets API v4 (Service Account JWT auth via Web Crypto) |
-| Markdown | `marked` + `dompurify` |
+![DSA Memo Interface Mockup](file:///C:/Users/prati/.gemini/antigravity/brain/7c8c1192-85b6-43ac-8958-0c7e7a98346c/dsa_memo_mockup_1778513612059.png)
 
 ---
 
-## Prerequisites
+## 🌟 Features
 
-- Node.js 18+
-- A [Groq API key](https://console.groq.com/) (free tier works)
-- A Google Cloud project with **Google Sheets API** enabled and a Service Account that has editor access to your sheet (only needed for the sync feature)
+### 📶 Progressive Hint System (The "Nudge" Philosophy)
+Why settle for a spoiler? DSA Memo's unique 6-level hint system ensures you only get as much help as you need to break through your current block.
+
+| Level | Mode | What You Get |
+| :--- | :--- | :--- |
+| **0** | 🔍 **Clarify** | Deep dive into the problem statement. No hints, just understanding. |
+| **1** | 💡 **Nudge** | A tiny directional hint. A pattern name or an observation. |
+| **2** | 🧩 **Concept** | The core insight explained via a mini analogous example. |
+| **3** | 🐞 **Debug** | Analysis of YOUR code. Logic error spotting & edge case reveals. |
+| **4** | 🏗️ **Algorithm** | Step-by-step logic construction & complexity analysis. No code. |
+| **5** | 🚀 **Solution** | Full C++/Python solution with dry runs & optimization tips. |
+
+### 🧠 AI-Powered Intelligence
+- **Problem Normalizer**: Paste a LeetCode URL, a GeekForGeeks link, or just a title. Our AI extracts constraints, examples, and difficulty automatically.
+- **Streaming Context**: Ultra-fast responses via Groq's Llama-3.3-70B model. It remembers your code and your previous questions.
+- **Voice Synthesis**: Hear your mentor! Integrated **PlayAI TTS** for realistic voice readback of assistant messages.
+
+### 📓 Knowledge Management
+- **Insight Capture**: Hit one button to generate a structured takeaway from your session.
+- **Google Sheets Sync**: Save your learnings to a live spreadsheet for long-term retention and interview prep.
+- **Analytics Dashboard**: Track time spent, difficulty distribution, and "struggle" metrics.
 
 ---
 
-## Setup
+## 🛠️ Tech Stack
 
-### 1. Install dependencies
+- **Frontend**: React 19, TypeScript, Tailwind CSS
+- **Build Tool**: Vite
+- **AI Core**: Groq SDK (`llama-3.3-70b-versatile`)
+- **Voice**: PlayAI TTS (`fritz-playai`)
+- **Database/Persistence**: Google Sheets API v4 (JWT via Web Crypto API)
+- **UI Components**: Custom glassmorphic design system
 
+---
+
+## 🚀 Quick Start
+
+### 1️⃣ Clone and Install
 ```bash
+git clone https://github.com/your-username/DSA-Memo.git
+cd DSA-Memo
 npm install
 ```
 
-### 2. Create `.env`
-
+### 2️⃣ Configure Environment
+Create a `.env` file in the root directory:
 ```env
-# Groq
-GROQ_API_KEY=your_groq_api_key_here
+# Essential
+GROQ_API_KEY=your_groq_api_key
 
-# Google Sheets (optional — only needed for "Sync to Live Sheet")
+# Optional (for Google Sheets Sync)
+GOOGLE_SHEET_ID=your_sheet_id
 GOOGLE_SERVICE_ACCOUNT_TYPE=service_account
-GOOGLE_PROJECT_ID=your_project_id
-GOOGLE_PRIVATE_KEY_ID=your_key_id
-GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-GOOGLE_CLIENT_EMAIL=your_service_account@project.iam.gserviceaccount.com
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
-GOOGLE_TOKEN_URI=https://oauth2.googleapis.com/token
-GOOGLE_AUTH_PROVIDER_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
-GOOGLE_CLIENT_CERT_URL=your_client_cert_url
-GOOGLE_SHEET_ID=your_google_sheet_id
+GOOGLE_PROJECT_ID=...
+GOOGLE_PRIVATE_KEY="..."
+GOOGLE_CLIENT_EMAIL=...
+# ... (see .env.example for full details)
 ```
 
-> The Google Sheets integration runs entirely client-side using Web Crypto API for JWT signing. This is intentional for a **personal / local tool** — do not deploy publicly with a service account key exposed.
-
-### 3. Run
-
+### 3️⃣ Launch
 ```bash
 npm run dev
 ```
-
-App starts at `http://localhost:3000`.
+Open [http://localhost:5173](http://localhost:5173) and start solving!
 
 ---
 
-## Project Structure
+## 🏗️ Project Structure
 
-```
+```text
 DSAMemo/
-├── components/
-│   ├── ChatArea.tsx          # Streaming chat UI, voice readback
-│   ├── Sidebar.tsx           # Problem input, session controls
-│   ├── CodeWorkspace.tsx     # Code editor + problem description tabs
-│   ├── TakeawaysModal.tsx    # Knowledge base — edit, export, sync
-│   └── Analytics.tsx         # Session stats dashboard
-├── geminiService.ts          # All Groq API calls
-├── googleSheetsService.ts    # Google Sheets JWT auth + append logic
-├── App.tsx                   # Root state, layout, orchestration
-└── types.ts                  # Problem, ChatMessage, Takeaway, UserStats
+├── 📁 components/        # Modular UI (Chat, Editor, Analytics, Modals)
+├── 📁 services/          # Groq AI & Google Sheets integrations
+├── 📄 App.tsx            # Main application orchestration & state
+├── 📄 types.ts           # Centralized type definitions
+├── 📄 geminiService.ts   # AI logic (Hinting, Normalization)
+└── 📄 googleSheets.ts    # Persistence logic
 ```
 
 ---
 
-## How It Works
+## 🗺️ Roadmap
 
-```
-User pastes problem
-       |
-normalizeProblem()  ->  Groq JSON mode  ->  structured Problem card
-       |
-User chats / requests hint
-       |
-getGuidedHintStream()  ->  Groq streaming  ->  token-by-token response
-       |
-User clicks "Capture Insight"
-       |
-generateTakeaway()  ->  Groq JSON mode  ->  notes, concept, category, stars
-       |
-"Sync to Live Sheet"  ->  JWT (Web Crypto)  ->  Google Sheets API batchUpdate
-```
+- [ ] **Multi-language Support**: Support for Java, JS, and Go in hint level 5.
+- [ ] **Visual Debugger**: Auto-generate tree/graph diagrams for Linked List/Tree problems.
+- [ ] **Problem Bank**: Integrated database of 500+ curated DSA patterns.
+- [ ] **PDF Export**: Export your session takeaways as a beautiful PDF summary.
 
 ---
 
-## Scripts
+## ⚖️ License
 
-```bash
-npm run dev      # dev server on :3000
-npm run build    # production build
-npm run preview  # preview production build
-```
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+<div align="center">
+Built with ❤️ for the DSA community.  
+<b>Happy Solving!</b>
+</div>
+
