@@ -286,6 +286,7 @@ ${problem.constraints.map(c => `- ${c}`).join('\n')}
                 problem={activeProblem}
                 code={code}
                 onClose={() => setIsInterviewMode(false)}
+                onOpenCode={() => setIsCodeEditorOpen(true)}
                 darkMode={darkMode}
               />
             ) : (

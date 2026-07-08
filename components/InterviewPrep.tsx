@@ -8,6 +8,7 @@ interface InterviewPrepProps {
   problem: Problem;
   code: string;
   onClose: () => void;
+  onOpenCode: () => void;
   darkMode?: boolean;
 }
 
@@ -27,6 +28,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
   problem,
   code,
   onClose,
+  onOpenCode,
   darkMode
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -35,6 +37,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
   
   // Speech synthesis states
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
   const [autoSpeak] = useState(true);
   const [speechRate] = useState(1.0);
   const [currentlySpeakingId, setCurrentlySpeakingId] = useState<string | null>(null);
@@ -61,19 +64,22 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
       if ('speechSynthesis' in window) {
         const availableVoices = window.speechSynthesis.getVoices();
         
-        // Find English voices only
-        const englishVoices = availableVoices.filter(v => v.lang.startsWith('en'));
-        
-        // Prioritize: Microsoft Natural voices (Aria, Guy) -> Google US English -> standard English
-        const bestVoice = 
-          englishVoices.find(v => v.name.includes('Natural') || v.name.includes('Aria') || v.name.includes('Guy')) ||
-          englishVoices.find(v => v.name.includes('Google') || v.name.includes('US English')) ||
-          englishVoices.find(v => v.lang.startsWith('en-US')) ||
-          englishVoices[0] ||
-          availableVoices[0];
+        if (availableVoices.length > 0) {
+          // Find English voices only
+          const englishVoices = availableVoices.filter(v => v.lang.startsWith('en'));
           
-        if (bestVoice) {
-          setSelectedVoice(bestVoice);
+          // Prioritize: Microsoft Natural voices (Aria, Guy) -> Google US English -> standard English
+          const bestVoice = 
+            englishVoices.find(v => v.name.includes('Natural') || v.name.includes('Aria') || v.name.includes('Guy')) ||
+            englishVoices.find(v => v.name.includes('Google') || v.name.includes('US English')) ||
+            englishVoices.find(v => v.lang.startsWith('en-US')) ||
+            englishVoices[0] ||
+            availableVoices[0];
+            
+          if (bestVoice) {
+            setSelectedVoice(bestVoice);
+            setVoicesLoaded(true);
+          }
         }
       }
     };
@@ -82,10 +88,19 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
     if ('speechSynthesis' in window) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
+
+    // Fallback safety to force greeting trigger if voices don't load within 1.5s
+    const fallbackTimer = setTimeout(() => {
+      setVoicesLoaded(true);
+    }, 1500);
+
+    return () => clearTimeout(fallbackTimer);
   }, []);
 
-  // Initial greeting from the interviewer
+  // Initial greeting from the interviewer (triggered only after voices are ready/fallback hits)
   useEffect(() => {
+    if (!voicesLoaded) return;
+
     const triggerGreeting = async () => {
       setIsTyping(true);
       const greetingMsgId = 'greeting-' + Date.now();
@@ -135,7 +150,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
         recognitionRef.current.stop();
       }
     };
-  }, [problem]);
+  }, [problem, voicesLoaded]);
 
   // Scroll to bottom when messages update
   useEffect(() => {
@@ -143,6 +158,13 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
+
+  // Focus input automatically when auto-listening triggers
+  useEffect(() => {
+    if (isListening && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isListening]);
 
   // Text-To-Speech function
   const speakText = (text: string, messageId: string) => {
@@ -164,9 +186,18 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
       .trim();
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
+    
+    // Ensure we use the exact voice selected dynamically if not set already
+    const voiceToUse = selectedVoice || (() => {
+      const voicesList = window.speechSynthesis.getVoices();
+      const englishVoices = voicesList.filter(v => v.lang.startsWith('en'));
+      return englishVoices.find(v => v.name.includes('Natural') || v.name.includes('Aria')) || englishVoices[0] || voicesList[0];
+    })();
+    
+    if (voiceToUse) {
+      utterance.voice = voiceToUse as SpeechSynthesisVoice;
     }
+    
     utterance.rate = speechRate;
     
     utterance.onstart = () => setCurrentlySpeakingId(messageId);
@@ -198,8 +229,6 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
 
     recognition.onstart = () => {
       setIsListening(true);
-      // Focus input element for hands-free typing
-      if (inputRef.current) inputRef.current.focus();
     };
 
     recognition.onresult = (event: any) => {
@@ -366,6 +395,21 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900 transition-colors duration-300 relative overflow-hidden">
+      {/* Styles for Audio Waves */}
+      <style>{`
+        @keyframes voiceWave {
+          0%, 100% { transform: scaleY(0.3); }
+          50% { transform: scaleY(1.0); }
+        }
+        .voice-wave-bar {
+          display: inline-block;
+          width: 4px;
+          border-radius: 99px;
+          animation: voiceWave 1s ease-in-out infinite;
+          transform-origin: center;
+        }
+      `}</style>
+
       {/* Top Banner Control */}
       <header className="px-6 py-4 border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 flex flex-wrap items-center justify-between gap-4 shrink-0 transition-colors">
         <div className="flex items-center gap-3">
@@ -381,7 +425,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
         <div className="flex items-center gap-3 flex-wrap">
           {/* Permanent Voice Indicator Badge */}
           {selectedVoice && (
-            <span className="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400 px-3 py-1.5 rounded-xl border dark:border-gray-700 flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400 px-3 py-1.5 rounded-xl border dark:border-gray-700 flex items-center gap-1.5 animate-in fade-in duration-300">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
               <i className="fa-solid fa-headset text-indigo-500"></i>
               Voice: {selectedVoice.name.replace('Microsoft', 'MS').replace('Online (Natural)', '')} (en)
@@ -414,7 +458,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
         </div>
       </header>
 
-      {/* Live Code Reference Banner */}
+      {/* Live Code Reference Viewer */}
       {!interviewEnded && (
         <div className="border-b dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/20 px-6 py-2 flex flex-col transition-all">
           <div className="flex items-center justify-between">
@@ -515,28 +559,53 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
             {isPaused && (
               <div className="absolute inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center z-20 transition-all animate-in fade-in duration-300">
                 <div className="bg-white/80 dark:bg-gray-800/80 border dark:border-gray-700 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4 text-center max-w-sm mx-4">
-                  <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center shadow-inner">
+                  <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-955/40 text-amber-500 flex items-center justify-center shadow-inner">
                     <i className="fa-solid fa-pause text-2xl"></i>
                   </div>
                   <div>
                     <h4 className="font-extrabold text-gray-900 dark:text-white text-lg">Interview Paused</h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      Voice inputs and speaking queues are temporarily suspended. Click below to pick up where you left off.
+                      Voice inputs and speaking queues are temporarily suspended. Click below to pick up where you left off or open the code editor.
                     </p>
                   </div>
-                  <button
-                    onClick={handlePauseToggle}
-                    className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-2xl text-xs transition-all active:scale-[0.98] shadow-md shadow-indigo-500/20"
-                  >
-                    Resume Interview
-                  </button>
+                  <div className="flex flex-col gap-2.5 w-full">
+                    <button
+                      onClick={handlePauseToggle}
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-2xl text-xs transition-all active:scale-[0.98] shadow-md shadow-indigo-500/20"
+                    >
+                      Resume Interview
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onOpenCode}
+                      className="w-full bg-white dark:bg-gray-700 border dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold py-2.5 rounded-2xl text-xs transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <i className="fa-solid fa-terminal text-blue-500"></i>
+                      Open Code Editor
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Input Bar Section */}
             <div className="p-4 md:p-6 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 transition-colors shrink-0">
-              <form onSubmit={handleSendMessage} className="flex gap-3 items-center">
+              <form onSubmit={handleSendMessage} className="flex gap-3 items-center relative">
+                {/* Open Code Editor & Auto-Pause Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isPaused) {
+                      handlePauseToggle();
+                    }
+                    onOpenCode();
+                  }}
+                  className="w-12 h-12 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-sm border border-gray-200 dark:border-gray-700 z-10"
+                  title="Open Code Editor & Pause Interview"
+                >
+                  <i className="fa-solid fa-terminal text-base"></i>
+                </button>
+
                 {/* Microphone trigger */}
                 <button
                   type="button"
@@ -544,28 +613,51 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
                   disabled={isPaused}
                   className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-all active:scale-95 shadow-sm ${
                     isListening
-                      ? 'bg-red-500 text-white border-red-500 animate-pulse'
+                      ? 'bg-red-505 text-white border-red-500 animate-pulse'
                       : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 border-gray-200 dark:border-gray-700'
-                  } disabled:opacity-50`}
+                  } disabled:opacity-50 z-10`}
                   title={isListening ? 'Stop recording voice' : 'Speak your answer (Speech-to-Text)'}
                 >
                   <i className={`fa-solid ${isListening ? 'fa-microphone-slash' : 'fa-microphone'} text-base`}></i>
                 </button>
 
-                <div className="relative flex-1">
+                <div className="relative flex-1 h-12">
+                  {/* Underlyng Text Input (hidden visually when STT active, but keeps focus for hitting Enter) */}
                   <input
                     ref={inputRef}
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     disabled={isTyping || isPaused}
-                    placeholder={isListening ? 'Listening, speak clearly... Press Enter when done.' : 'Explain your code, logic, or complexity...'}
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-6 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 text-gray-900 dark:text-gray-100 transition-all disabled:opacity-75 shadow-sm"
+                    placeholder="Explain your code, logic, complexity..."
+                    className={`w-full h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-6 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 text-gray-900 dark:text-gray-100 transition-all disabled:opacity-75 shadow-sm ${
+                      isListening ? 'opacity-0 select-none' : 'opacity-100'
+                    }`}
                   />
+
+                  {/* Audio Wave Visualizer Overlay (hides transcribing text) */}
+                  {isListening && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-50/80 to-amber-50/80 dark:from-red-950/20 dark:to-amber-950/20 rounded-2xl flex items-center justify-between px-6 border border-red-300 dark:border-red-900/50 transition-all animate-in fade-in duration-300">
+                      <div className="flex items-center gap-3">
+                        {/* CSS Animating Wave Bars */}
+                        <div className="flex items-center gap-1.5 h-6">
+                          <span className="voice-wave-bar bg-red-500 w-1 h-3" style={{ animationDelay: '0.1s', animationDuration: '0.8s' }}></span>
+                          <span className="voice-wave-bar bg-orange-500 w-1 h-5" style={{ animationDelay: '0.3s', animationDuration: '1.2s' }}></span>
+                          <span className="voice-wave-bar bg-amber-500 w-1 h-4" style={{ animationDelay: '0.5s', animationDuration: '0.9s' }}></span>
+                          <span className="voice-wave-bar bg-yellow-500 w-1 h-6" style={{ animationDelay: '0.2s', animationDuration: '1.1s' }}></span>
+                          <span className="voice-wave-bar bg-green-500 w-1 h-3" style={{ animationDelay: '0.4s', animationDuration: '0.7s' }}></span>
+                        </div>
+                        <span className="text-[11px] font-bold text-red-600 dark:text-red-400 tracking-wide uppercase animate-pulse">
+                          Listening... speak and press Enter when finished
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     type="submit"
                     disabled={!input.trim() || isTyping || isPaused}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center justify-center hover:shadow-lg active:scale-95 transition-all disabled:opacity-50"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center justify-center hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 z-10"
                   >
                     <i className="fa-solid fa-arrow-up"></i>
                   </button>
@@ -575,17 +667,12 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
                   type="button"
                   onClick={handleEndInterview}
                   disabled={messages.length < 2 || isTyping || isPaused}
-                  className="px-5 h-12 bg-gray-900 hover:bg-black dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs flex items-center justify-center shrink-0 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 h-12 bg-gray-900 hover:bg-black dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs flex items-center justify-center shrink-0 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed z-10"
                 >
                   <i className="fa-solid fa-flag-checkered mr-2"></i>
                   End Interview
                 </button>
               </form>
-              {isListening && (
-                <div className="mt-2 text-[10px] text-red-500 font-bold uppercase tracking-wider flex items-center gap-1.5 animate-pulse pl-1">
-                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Hands-free listening active. Speak freely, then hit Enter.
-                </div>
-              )}
             </div>
           </>
         ) : (
@@ -607,7 +694,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Comm score */}
                   <div className="bg-gray-50 dark:bg-gray-800/40 p-6 rounded-2xl border dark:border-gray-800 flex items-center gap-6 shadow-sm">
-                    <div className="w-20 h-20 rounded-full border-4 border-amber-400 flex flex-col items-center justify-center shrink-0 bg-amber-50 dark:bg-amber-950/20">
+                    <div className="w-20 h-20 rounded-full border-4 border-amber-400 flex flex-col items-center justify-center shrink-0 bg-amber-50 dark:bg-amber-955/20">
                       <span className="text-2xl font-black text-amber-600 dark:text-amber-400 leading-none">{feedback.communicationScore}</span>
                       <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter mt-1">/ 100</span>
                     </div>
