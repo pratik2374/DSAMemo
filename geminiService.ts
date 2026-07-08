@@ -310,5 +310,107 @@ Context: ${chatHistory}`
     } catch (err) {
       console.error('TTS error:', err);
     }
+  },
+
+  async *getMockInterviewStream(
+    problem: Problem,
+    code: string,
+    latestUserResponse: string,
+    chatHistory: any[]
+  ) {
+    const systemPrompt = `You are a Senior Technical Interviewer at a top-tier tech company.
+Your goal is to conduct a realistic, mock technical interview for the problem: "${problem.title}".
+
+The candidate has submitted the following code:
+\`\`\`
+${code || '// No code provided'}
+\`\`\`
+
+Problem Statement:
+${problem.statement}
+
+Constraints:
+${problem.constraints.map(c => `- ${c}`).join('\n')}
+
+INSTRUCTIONS:
+1. Act in character as a thorough, encouraging, yet analytical interviewer.
+2. Ask follow-up questions to understand the candidate's approach, code logic, time/space complexity, edge cases, or potential optimization.
+3. Only ask ONE question or make ONE point at a time. Keep your messages concise (under 4 sentences) and highly conversational, as they will be spoken aloud to the candidate.
+4. DO NOT provide code solutions or full answers. Instead, probe the user's reasoning. If they are stuck, give them a subtle hint, just like a real interviewer would.
+5. If this is the start of the interview (no previous messages or only greetings), greet the candidate, mention that you've reviewed their solution code, and ask them to explain their core approach or intuition.
+`;
+
+    const formattedHistory = chatHistory.map((msg: any) => ({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: msg.content
+    }));
+
+    const stream = await groq.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...formattedHistory,
+        { role: 'user', content: latestUserResponse }
+      ],
+      temperature: 0.7,
+      stream: true
+    });
+
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content || '';
+      if (text) {
+        yield { text };
+      }
+    }
+  },
+
+  async generateInterviewFeedback(
+    problem: Problem,
+    code: string,
+    chatHistory: any[]
+  ): Promise<{
+    communicationScore: number;
+    correctnessScore: number;
+    strengths: string[];
+    weaknesses: string[];
+    feedbackSummary: string;
+    tipsForImprovement: string[];
+  }> {
+    const chatTranscript = chatHistory
+      .map(m => `${m.role === 'user' ? 'Candidate' : 'Interviewer'}: ${m.content}`)
+      .join('\n');
+
+    const systemPrompt = `You are a Senior Technical Interviewer. Analyze the mock technical interview transcript and provide a structured evaluation of the candidate.
+Return a JSON object with exactly these fields:
+{
+  "communicationScore": number (1 to 100 representing how clearly they explained ideas),
+  "correctnessScore": number (1 to 100 representing code logic and correctness),
+  "strengths": string[] (list of strengths in their solution, reasoning, or communication),
+  "weaknesses": string[] (list of weaknesses, code errors, or gaps in explanation),
+  "feedbackSummary": string (a concise overview of how they did),
+  "tipsForImprovement": string[] (actionable recommendations)
+}
+Always return valid JSON.`;
+
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: `Problem: ${problem.title}
+Code:
+\`\`\`
+${code || '// No code provided'}
+\`\`\`
+
+Interview Transcript:
+${chatTranscript}`
+        }
+      ],
+      response_format: { type: 'json_object' }
+    });
+
+    return JSON.parse(response.choices[0].message.content || '{}');
   }
 };

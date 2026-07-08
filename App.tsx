@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import CodeWorkspace from './components/CodeWorkspace';
 import TakeawaysModal from './components/TakeawaysModal';
+import InterviewPrep from './components/InterviewPrep';
 
 const App: React.FC = () => {
   const [activeProblem, setActiveProblem] = useState<Problem | null>(null);
@@ -19,6 +20,7 @@ const App: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false); 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [isInterviewMode, setIsInterviewMode] = useState(false);
   
   const [workspaceWidth, setWorkspaceWidth] = useState(45); 
   const [isWorkspaceCollapsed, setIsWorkspaceCollapsed] = useState(true); 
@@ -78,6 +80,7 @@ const App: React.FC = () => {
       const problem = await geminiService.normalizeProblem(input);
       console.log("Normalized Problem:", problem);
       setActiveProblem(problem);
+      setIsInterviewMode(false);
       
       const problemContext = `
 # ${problem.title}
@@ -240,7 +243,22 @@ ${problem.constraints.map(c => `- ${c}`).join('\n')}
             </h1>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {activeProblem && (
+              <button
+                onClick={() => setIsInterviewMode(!isInterviewMode)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 ${
+                  isInterviewMode
+                    ? 'bg-gradient-to-r from-amber-500 to-red-500 text-white hover:from-amber-600 hover:to-red-600'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20'
+                }`}
+                title={isInterviewMode ? "Switch to Mentorship Chat" : "Start Mock Interview Prep"}
+              >
+                <i className={`fa-solid ${isInterviewMode ? 'fa-message' : 'fa-microphone'}`}></i>
+                <span>{isInterviewMode ? 'Mentorship Chat' : 'Mock Interview Prep'}</span>
+              </button>
+            )}
+
             <button 
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:ring-2 hover:ring-indigo-500 transition-all shadow-sm"
@@ -263,75 +281,86 @@ ${problem.constraints.map(c => `- ${c}`).join('\n')}
             style={{ width: (!activeProblem || isWorkspaceCollapsed) ? '100%' : `${100 - workspaceWidth}%` }}
             className="flex flex-col border-r dark:border-gray-800 bg-white dark:bg-gray-900 transition-all duration-300"
           >
-            <div className="p-4 border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 shrink-0 transition-colors">
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                  <i className="fa-solid fa-wand-sparkles text-indigo-500"></i>
-                  Assistance — Level {hintLevel}
-                </label>
-                {activeProblem && isWorkspaceCollapsed && (
-                  <button
-                    onClick={() => setIsWorkspaceCollapsed(false)}
-                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-[10px] font-bold flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded transition-colors"
-                  >
-                    <i className="fa-solid fa-expand"></i> Show Description
-                  </button>
-                )}
-              </div>
-
-              {/* Numbers above the slider — px-[7px] offsets half the thumb width so 0 and 5 sit over their thumb stops */}
-              <div className="flex justify-between px-[7px] mb-1">
-                {([
-                  { n: 0, tip: 'Question clarification' },
-                  { n: 1, tip: 'One pattern name or DS, nothing more' },
-                  { n: 2, tip: 'Core idea + a mini analogous example' },
-                  { n: 3, tip: 'Logic errors spotted or deep theory' },
-                  { n: 4, tip: 'Full algorithm + complexity, no code' },
-                  { n: 5, tip: 'Complete code, dry run & optimizations' },
-                ] as const).map(({ n, tip }) => (
-                  <div key={n} className="relative group">
-                    <button
-                      onClick={() => handleHintLevelChange(n)}
-                      className={`text-[11px] font-black w-4 text-center block transition-colors ${
-                        hintLevel === n
-                          ? 'text-indigo-600 dark:text-indigo-400'
-                          : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
-                      }`}
-                    >
-                      {n}
-                    </button>
-                    {/* Tooltip: anchored left for 0, right for 5, centered otherwise */}
-                    <div className={`absolute bottom-full mb-2 px-2.5 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-[10px] rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl ${
-                      n === 0 ? 'left-0' : n === 5 ? 'right-0' : 'left-1/2 -translate-x-1/2'
-                    }`}>
-                      {tip}
-                      <div className={`absolute top-full border-4 border-transparent border-t-gray-900 dark:border-t-gray-700 ${
-                        n === 0 ? 'left-2' : n === 5 ? 'right-2' : 'left-1/2 -translate-x-1/2'
-                      }`} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Slider */}
-              <input
-                type="range"
-                min="0"
-                max="5"
-                value={hintLevel}
-                onChange={(e) => handleHintLevelChange(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            {isInterviewMode && activeProblem ? (
+              <InterviewPrep
+                problem={activeProblem}
+                code={code}
+                onClose={() => setIsInterviewMode(false)}
+                darkMode={darkMode}
               />
-            </div>
-            
-            <ChatArea 
-              messages={chatMessages} 
-              onSendMessage={handleSendMessage} 
-              isTyping={isTyping} 
-              onSpeak={geminiService.speak}
-              onOpenCode={() => setIsCodeEditorOpen(true)}
-              darkMode={darkMode}
-            />
+            ) : (
+              <>
+                <div className="p-4 border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 shrink-0 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                      <i className="fa-solid fa-wand-sparkles text-indigo-500"></i>
+                      Assistance — Level {hintLevel}
+                    </label>
+                    {activeProblem && isWorkspaceCollapsed && (
+                      <button
+                        onClick={() => setIsWorkspaceCollapsed(false)}
+                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-[10px] font-bold flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded transition-colors"
+                      >
+                        <i className="fa-solid fa-expand"></i> Show Description
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Numbers above the slider — px-[7px] offsets half the thumb width so 0 and 5 sit over their thumb stops */}
+                  <div className="flex justify-between px-[7px] mb-1">
+                    {([
+                      { n: 0, tip: 'Question clarification' },
+                      { n: 1, tip: 'One pattern name or DS, nothing more' },
+                      { n: 2, tip: 'Core idea + a mini analogous example' },
+                      { n: 3, tip: 'Logic errors spotted or deep theory' },
+                      { n: 4, tip: 'Full algorithm + complexity, no code' },
+                      { n: 5, tip: 'Complete code, dry run & optimizations' },
+                    ] as const).map(({ n, tip }) => (
+                      <div key={n} className="relative group">
+                        <button
+                          onClick={() => handleHintLevelChange(n)}
+                          className={`text-[11px] font-black w-4 text-center block transition-colors ${
+                            hintLevel === n
+                              ? 'text-indigo-600 dark:text-indigo-400'
+                              : 'text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400'
+                          }`}
+                        >
+                          {n}
+                        </button>
+                        {/* Tooltip: anchored left for 0, right for 5, centered otherwise */}
+                        <div className={`absolute bottom-full mb-2 px-2.5 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-[10px] rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl ${
+                          n === 0 ? 'left-0' : n === 5 ? 'right-0' : 'left-1/2 -translate-x-1/2'
+                        }`}>
+                          {tip}
+                          <div className={`absolute top-full border-4 border-transparent border-t-gray-900 dark:border-t-gray-700 ${
+                            n === 0 ? 'left-2' : n === 5 ? 'right-2' : 'left-1/2 -translate-x-1/2'
+                          }`} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Slider */}
+                  <input
+                    type="range"
+                    min="0"
+                    max="5"
+                    value={hintLevel}
+                    onChange={(e) => handleHintLevelChange(parseInt(e.target.value))}
+                    className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  />
+                </div>
+                
+                <ChatArea 
+                  messages={chatMessages} 
+                  onSendMessage={handleSendMessage} 
+                  isTyping={isTyping} 
+                  onSpeak={geminiService.speak}
+                  onOpenCode={() => setIsCodeEditorOpen(true)}
+                  darkMode={darkMode}
+                />
+              </>
+            )}
           </div>
 
           {!isWorkspaceCollapsed && activeProblem && (
