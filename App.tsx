@@ -19,7 +19,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false); 
   const [isTyping, setIsTyping] = useState(false); 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [isInterviewMode, setIsInterviewMode] = useState(false);
   
   const [workspaceWidth, setWorkspaceWidth] = useState(45); 
