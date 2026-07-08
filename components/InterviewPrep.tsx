@@ -56,7 +56,12 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  
+  // A ref to keep track of messages for callback functions
+  const messagesRef = useRef<ChatMessage[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Load browser voices & lock English voice permanently
   useEffect(() => {
@@ -159,13 +164,6 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
     }
   }, [messages, isTyping]);
 
-  // Focus input automatically when auto-listening triggers
-  useEffect(() => {
-    if (isListening && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isListening]);
-
   // Text-To-Speech function
   const speakText = (text: string, messageId: string) => {
     if (!('speechSynthesis' in window)) return;
@@ -207,7 +205,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
       // Auto-trigger hands-free speech recognition (STT) when the interviewer finishes speaking
       if (autoSpeak && !isPaused && !interviewEnded) {
         setTimeout(() => {
-          startListeningAutomatically();
+          startSpeechRecognition();
         }, 400);
       }
     };
@@ -217,8 +215,8 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
     window.speechSynthesis.speak(utterance);
   };
 
-  // Auto-listening speech recognition helper
-  const startListeningAutomatically = () => {
+  // Speech recognition helper
+  const startSpeechRecognition = () => {
     if (!SpeechRecognition || isPaused || interviewEnded || isTyping) return;
     if (isListening) return;
 
@@ -275,46 +273,12 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
       return;
     }
 
-    startListeningAutomatically();
+    startSpeechRecognition();
   };
 
-  // Pause / Resume toggle logic
-  const handlePauseToggle = () => {
-    if (isPaused) {
-      // Resume
-      setIsPaused(false);
-      // Auto-start listening on resume if no speech is playing
-      if (!currentlySpeakingId) {
-        setTimeout(() => {
-          startListeningAutomatically();
-        }, 200);
-      }
-    } else {
-      // Pause
-      setIsPaused(true);
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-      if (isListening) {
-        recognitionRef.current?.stop();
-        setIsListening(false);
-      }
-      setCurrentlySpeakingId(null);
-    }
-  };
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isTyping || isPaused) return;
-
-    // Stop listening since user is submitting
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    }
-
-    const userText = input.trim();
-    setInput('');
+  // Central submission method
+  const sendMessage = async (userText: string) => {
+    if (!userText.trim()) return;
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -351,14 +315,65 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
         setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: fullContent } : m));
       }
 
+      // Speak response if not paused
       if (autoSpeak && !isPaused) {
         speakText(fullContent, assistantMsgId);
       }
     } catch (err) {
       console.error(err);
-      setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: 'Sorry, I encountered an issue processing that. Could you repeat or clarify?' } : m));
+      setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: 'Sorry, I encountered an issue processing that.' } : m));
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  // Pause / Resume flow logic
+  const handlePauseToggle = () => {
+    if (isPaused) {
+      // Resume
+      setIsPaused(false);
+      
+      // Check if there is an unread interviewer response (e.g. sent during pause)
+      const curMessages = messagesRef.current;
+      const lastMsg = curMessages[curMessages.length - 1];
+      if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content && !currentlySpeakingId) {
+        speakText(lastMsg.content, lastMsg.id);
+      } else if (!currentlySpeakingId) {
+        setTimeout(() => {
+          startSpeechRecognition();
+        }, 200);
+      }
+    } else {
+      // Pause
+      if (input.trim()) {
+        // "If pause in bwtween it sends."
+        const textToSend = input.trim();
+        setInput('');
+        
+        if (isListening) {
+          recognitionRef.current?.stop();
+          setIsListening(false);
+        }
+        
+        // Submit immediately and put into pause state
+        setIsPaused(true);
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        setCurrentlySpeakingId(null);
+        sendMessage(textToSend);
+      } else {
+        // Normal pause
+        setIsPaused(true);
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        if (isListening) {
+          recognitionRef.current?.stop();
+          setIsListening(false);
+        }
+        setCurrentlySpeakingId(null);
+      }
     }
   };
 
@@ -475,7 +490,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
           </div>
 
           {showCodePreview && (
-            <div className="mt-2 p-3 bg-gray-900 text-green-400 rounded-lg text-xs font-mono max-h-24 overflow-y-auto border border-gray-800 shadow-inner">
+            <div className="mt-2 p-3 bg-gray-900 text-green-400 rounded-lg text-xs font-mono max-h-24 overflow-y-auto border border-gray-800 shadow-inner animate-in slide-in-from-top-1 duration-200">
               {code ? (
                 <pre className="whitespace-pre-wrap">{code}</pre>
               ) : (
@@ -578,7 +593,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
                     <button
                       type="button"
                       onClick={onOpenCode}
-                      className="w-full bg-white dark:bg-gray-700 border dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold py-2.5 rounded-2xl text-xs transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+                      className="w-full bg-white dark:bg-gray-700 border dark:border-gray-650 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold py-2.5 rounded-2xl text-xs transition-all active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
                     >
                       <i className="fa-solid fa-terminal text-blue-500"></i>
                       Open Code Editor
@@ -588,10 +603,10 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
               </div>
             )}
 
-            {/* Input Bar Section */}
-            <div className="p-4 md:p-6 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 transition-colors shrink-0">
-              <form onSubmit={handleSendMessage} className="flex gap-3 items-center relative">
-                {/* Open Code Editor & Auto-Pause Button */}
+            {/* Input Wave Bar Section */}
+            <div className="p-6 border-t dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 transition-colors shrink-0 flex flex-col gap-4">
+              <div className="flex gap-4 items-center w-full">
+                {/* Code Editor Trigger */}
                 <button
                   type="button"
                   onClick={() => {
@@ -600,79 +615,98 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
                     }
                     onOpenCode();
                   }}
-                  className="w-12 h-12 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-sm border border-gray-200 dark:border-gray-700 z-10"
+                  className="w-12 h-12 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-sm border border-gray-200 dark:border-gray-700"
                   title="Open Code Editor & Pause Interview"
                 >
                   <i className="fa-solid fa-terminal text-base"></i>
                 </button>
 
-                {/* Microphone trigger */}
-                <button
-                  type="button"
-                  onClick={toggleListening}
-                  disabled={isPaused}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-all active:scale-95 shadow-sm ${
+                {/* Pulsating Wave Form Panel (Clicking quiet wave starts mic, clicking active wave sends message) */}
+                <div
+                  onClick={() => {
+                    if (isPaused || isTyping) return;
+                    if (isListening) {
+                      const textToSend = input.trim();
+                      if (textToSend) {
+                        setInput('');
+                        if (isListening) {
+                          recognitionRef.current?.stop();
+                          setIsListening(false);
+                        }
+                        sendMessage(textToSend);
+                      }
+                    } else {
+                      toggleListening();
+                    }
+                  }}
+                  className={`flex-1 h-16 rounded-2xl border flex items-center justify-between px-6 cursor-pointer select-none transition-all ${
                     isListening
-                      ? 'bg-red-505 text-white border-red-500 animate-pulse'
-                      : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 border-gray-200 dark:border-gray-700'
-                  } disabled:opacity-50 z-10`}
-                  title={isListening ? 'Stop recording voice' : 'Speak your answer (Speech-to-Text)'}
+                      ? 'bg-gradient-to-r from-red-500/10 to-amber-500/10 border-red-400 dark:border-red-900/50 shadow-inner'
+                      : 'bg-white dark:bg-gray-855 border-gray-200 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-600 hover:shadow-md'
+                  } ${isPaused || isTyping ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <i className={`fa-solid ${isListening ? 'fa-microphone-slash' : 'fa-microphone'} text-base`}></i>
-                </button>
+                  <div className="flex items-center gap-3">
+                    {/* Pulsating Wave Bars */}
+                    <div className="flex items-center gap-1.5 h-8">
+                      {Array.from({ length: 15 }).map((_, i) => {
+                        const heights = [16, 28, 20, 32, 14, 24, 18, 30, 22, 16, 26, 12, 22, 18, 24];
+                        const delay = (i * 0.08).toFixed(2);
+                        const duration = (0.7 + Math.random() * 0.6).toFixed(2);
+                        return (
+                          <span
+                            key={i}
+                            className={`voice-wave-bar w-[3px] rounded-full transition-all ${
+                              isListening 
+                                ? 'bg-gradient-to-t from-red-500 to-amber-500' 
+                                : 'bg-gray-300 dark:bg-gray-600'
+                            }`}
+                            style={{
+                              height: isListening ? `${heights[i % heights.length]}px` : '6px',
+                              animationName: isListening ? 'voiceWave' : 'none',
+                              animationDelay: `${delay}s`,
+                              animationDuration: `${duration}s`,
+                              animationIterationCount: 'infinite',
+                              animationTimingFunction: 'ease-in-out'
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className={`text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                      isListening ? 'text-red-500 animate-pulse' : 'text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {isPaused 
+                        ? 'Interview Paused' 
+                        : isTyping 
+                          ? 'Interviewer is thinking...' 
+                          : currentlySpeakingId 
+                            ? 'Interviewer is speaking...' 
+                            : isListening 
+                              ? 'Listening... Click here to Send' 
+                              : 'Click here to speak'}
+                    </span>
+                  </div>
 
-                <div className="relative flex-1 h-12">
-                  {/* Underlyng Text Input (hidden visually when STT active, but keeps focus for hitting Enter) */}
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    disabled={isTyping || isPaused}
-                    placeholder="Explain your code, logic, complexity..."
-                    className={`w-full h-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-6 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 text-gray-900 dark:text-gray-100 transition-all disabled:opacity-75 shadow-sm ${
-                      isListening ? 'opacity-0 select-none' : 'opacity-100'
-                    }`}
-                  />
-
-                  {/* Audio Wave Visualizer Overlay (hides transcribing text) */}
                   {isListening && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-50/80 to-amber-50/80 dark:from-red-950/20 dark:to-amber-950/20 rounded-2xl flex items-center justify-between px-6 border border-red-300 dark:border-red-900/50 transition-all animate-in fade-in duration-300">
-                      <div className="flex items-center gap-3">
-                        {/* CSS Animating Wave Bars */}
-                        <div className="flex items-center gap-1.5 h-6">
-                          <span className="voice-wave-bar bg-red-500 w-1 h-3" style={{ animationDelay: '0.1s', animationDuration: '0.8s' }}></span>
-                          <span className="voice-wave-bar bg-orange-500 w-1 h-5" style={{ animationDelay: '0.3s', animationDuration: '1.2s' }}></span>
-                          <span className="voice-wave-bar bg-amber-500 w-1 h-4" style={{ animationDelay: '0.5s', animationDuration: '0.9s' }}></span>
-                          <span className="voice-wave-bar bg-yellow-500 w-1 h-6" style={{ animationDelay: '0.2s', animationDuration: '1.1s' }}></span>
-                          <span className="voice-wave-bar bg-green-500 w-1 h-3" style={{ animationDelay: '0.4s', animationDuration: '0.7s' }}></span>
-                        </div>
-                        <span className="text-[11px] font-bold text-red-600 dark:text-red-400 tracking-wide uppercase animate-pulse">
-                          Listening... speak and press Enter when finished
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black uppercase text-red-500 bg-red-100 dark:bg-red-955/40 px-2.5 py-1 rounded-lg animate-pulse">
+                        Live Mic
+                      </span>
                     </div>
                   )}
-
-                  <button
-                    type="submit"
-                    disabled={!input.trim() || isTyping || isPaused}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center justify-center hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 z-10"
-                  >
-                    <i className="fa-solid fa-arrow-up"></i>
-                  </button>
                 </div>
 
+                {/* End Interview */}
                 <button
                   type="button"
                   onClick={handleEndInterview}
                   disabled={messages.length < 2 || isTyping || isPaused}
-                  className="px-5 h-12 bg-gray-900 hover:bg-black dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs flex items-center justify-center shrink-0 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed z-10"
+                  className="px-6 h-12 bg-gray-900 hover:bg-black dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-bold rounded-2xl text-xs flex items-center justify-center shrink-0 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <i className="fa-solid fa-flag-checkered mr-2"></i>
                   End Interview
                 </button>
-              </form>
+              </div>
             </div>
           </>
         ) : (
@@ -739,7 +773,7 @@ const InterviewPrep: React.FC<InterviewPrepProps> = ({
                     </h4>
                     <ul className="space-y-2.5">
                       {feedback.strengths.map((str, idx) => (
-                        <li key={idx} className="flex gap-3 items-start bg-green-50/50 dark:bg-green-950/10 p-3.5 rounded-xl border border-green-100/50 dark:border-green-900/30 text-xs text-gray-700 dark:text-gray-300">
+                        <li key={idx} className="flex gap-3 items-start bg-green-50/50 dark:bg-green-955/10 p-3.5 rounded-xl border border-green-100/50 dark:border-green-900/30 text-xs text-gray-700 dark:text-gray-300">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0"></span>
                           <span>{str}</span>
                         </li>
